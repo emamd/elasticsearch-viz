@@ -72,3 +72,56 @@ define(['scripts/d3.v3','scripts/elasticsearch'], function(d3, elasticsearch){
 
     });
 });
+
+define(['scripts/d3.v3', 'scripts/elasticsearch'], function (d3, elasticsearch) {
+    "use strict";
+    var client = new elasticsearch.Client();
+
+    client.search({
+        index: 'nfl',
+        size: 5,
+        body: {
+            query: {
+                bool: {
+                    must: { match: { "description": "TOUCHDOWN" }},
+                    must_not: [
+                        { match: {"description": "intercepted"}},
+                        { match: {"description": "incomplete"}},
+                        { match: {"description": "FUMBLES"}},
+                        { match: {"description": "NULLIFIED"}}
+                    ]
+                }
+            },
+            aggs: {
+                teams: {
+                    terms: {
+                        field: "off",
+                        exclude: "", // exclude empty strings
+                        size: 5
+                    },
+                    aggs: {
+                        players: {
+                            terms: {
+                                field: "description",
+                                include: "([a-z]?[.][a-z]+)", // regex to pull out player names e.g. S.Ridley, P.Manning
+                                size: 20 // limit to 20 players per team
+                            },
+                            aggs: {
+                                qtrs: {
+                                    terms: {
+                                        field: "qtr"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }).then(function (resp) {
+        console.log(resp);
+
+        // d3 code goes here.
+    });
+
+});
